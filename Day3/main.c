@@ -80,7 +80,18 @@ void p_vec_info(Vector *vec) {
 typedef struct {
     int num;
     bool included;
+    int y;
+    int beg;
+    int end;
 } Part;
+
+typedef struct {
+    int x;
+    int y;
+} Gear;
+
+
+// WARNING!!! This solution is horrible...
 
 int main() {
     FILE *input;
@@ -110,16 +121,24 @@ int main() {
     Vector numbers;
     vec_init(&numbers, sizeof(Part), NULL, 0);
 
+    Vector gears;
+    vec_init(&gears, sizeof(Gear), NULL, 0);
+
     for (int y = 0; y < engine.len; y++) {
         Vector *row = vec_get(&engine, y);
 
-        Part part = { 0, false };
+        Part part = { 0, false, -1, -1, -1 };
+        Gear gear = { -1, -1 };
         char prev_char = '.';
 
         for (int x = 0; x < engine.len; x++) {
             char *current_char = vec_get(row, x);
 
             if (isdigit(*current_char)) {
+                if (part.num == 0) {
+                    part.y = y;
+                    part.beg = x;
+                }
                 part.num *= 10;
                 part.num += *current_char - '0';
 
@@ -145,12 +164,32 @@ int main() {
                         if (*a_char != '.' && !isdigit(*a_char)) { part.included = true; }
                     }
                 }
-            } else {
+            } else if (*current_char == '*') {
+                gear.x = x;
+                gear.y = y;
+                vec_push(&gears, &gear);
+                gear.x = -1;
+                gear.y = -1;
                 // Add the part when the digits end
                 if (isdigit(prev_char)) {
+                    part.end = x-1;
                     vec_push(&numbers, &part);
                     part.num = 0;
                     part.included = false;
+                    part.y = -1;
+                    part.beg = -1;
+                    part.end = -1;
+                }
+            } else {
+                // Add the part when the digits end
+                if (isdigit(prev_char)) {
+                    part.end = x-1;
+                    vec_push(&numbers, &part);
+                    part.num = 0;
+                    part.included = false;
+                    part.y = -1;
+                    part.beg = -1;
+                    part.end = -1;
                 }
             }
 
@@ -159,9 +198,13 @@ int main() {
 
         // Add the part when there is no next char other than a number
         if (isdigit(prev_char)) {
+            part.end = engine.len - 1;
             vec_push(&numbers, &part);
             part.num = 0;
             part.included = false;
+            part.y = -1;
+            part.beg = -1;
+            part.end = -1;
         }
     }
 
@@ -173,7 +216,37 @@ int main() {
         }
     }
 
-    printf("Sum of all the parts is equal to: %d", sum);
+    int gear_ratio_sum = 0;
+    // NOTICE: It could be done more efficiently by using a hashmap but I'm not going to implement one currently
+    for (int i = 0; i < gears.len; i++) {
+        Gear *gear = vec_get(&gears, i);
+        int part1 = 0;
+        int part2 = 0;
+
+        for (int j = 0; j < numbers.len; j++) {
+            Part *part = vec_get(&numbers, j);
+
+            for (int ai = -1; ai <= 1; ai++) {
+                for (int aj = -1; aj <= 1; aj++) {
+                    if (gear->y + ai == part->y && gear->x + aj >= part->beg && gear->x + aj <= part->end) {
+                        if (part1 == 0 || part1 == part->num) {
+                            part1 = part->num;
+                        } else if (part2 == 0 || part2 == part->num) {
+                            part2 = part->num;
+                        } else {
+                            part1 = 0;
+                            part2 = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        gear_ratio_sum += part1 * part2;
+    }
+
+    printf("Sum of all the parts is equal to: %d\n", sum);
+    printf("Sum of all the gear ratios is equal to: %d", gear_ratio_sum);
 
     fclose(input);
     return 0;
