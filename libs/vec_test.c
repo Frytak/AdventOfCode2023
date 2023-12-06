@@ -18,25 +18,117 @@ void vec_init_test(Vector *vec, bool add_vec_info) {
     }
 }
 
-void vec_read_file_test(Vector *vec, char file_name[], bool add_vec_info) {
-    size_t bytes_written;
-    errno_t ret;
+VBS_COMP comp(void *character) {
+    switch (*(char*)character) {
+        case 0: { return VBS_COMP_LEFT; }
+        case '\n': { return VBS_COMP_FOUND; }
+        default: { return VBS_COMP_RIGHT; }
+    }
+}
 
-    vec_init(vec, sizeof(char), NULL, 20);
-    ret = vec_read_file(vec, file_name, &bytes_written, 0);
-    p_vec_info(vec);
-    for (int i = 0; i < vec->len; i++) {
-        printf("'%d' ", *(char*)vec_get(vec, i));
+void vec_binary_search_test() {
+    Vector vec;
+    char data[] = "Gami to furras\n";
+    vec_init(&vec, sizeof(char), &data, (sizeof(data) + (5 * sizeof(data[0]))) / sizeof(data[0]));
+
+    size_t index = 0;
+    int bin_ret = vec_binary_search(&vec, &comp, 0, vec.len, &index);
+
+    switch (bin_ret) {
+        case VBS_OK: { printf("Found `\\n` at index = %d", (int)index); break; }
+        case VBS_OUT_OF_BOUNDS: { printf("Boundry is bigger than the vector length!"); break; }
+        case VBS_COMP_INVALID_OUTPUT: { printf("Function `comp` gives invalid output!"); break; }
+        case VBS_NOT_FOUND: { printf("The searched for value doesn't exist in the current boundry."); break; }
+        case VBS_INVALID_INPUT: { printf("`beg` is bigger than `end`"); break; }
+    }
+}
+
+void fgets_test() {
+    FILE *file;
+    Vector vec;
+
+    vec_init(&vec, sizeof(char), NULL, 6);
+    p_vec_info(&vec);
+
+    printf("%d\n", fopen_s(&file, "vec_test.txt", "rt"));
+    fgets(vec.data, vec.cap, file);
+    p_vec_info(&vec);
+
+    for (int i = 0; i < vec.cap; i++) {
+        printf("'%c' ", *(char*)vec_get_unchecked(&vec, i));
     }
 
-    printf("\nRETURN: %d", ret);
+    _vec_alloc(&vec, ((vec.cap - 2) * 2) + 2);
+    fgets(vec.data + (vec.cap/2) * vec.size, vec.cap/2, file);
+    p_vec_info(&vec);
+
+    for (int i = 0; i < vec.cap; i++) {
+        printf("'%c' ", *(char*)vec_get_unchecked(&vec, i));
+    }
+}
+VBS_COMP vec_rf_comp(void *character) {
+    switch (*(char*)character) {
+        case '\n': { return VBS_COMP_FOUND; }
+        case 0: { return VBS_COMP_LEFT; }
+        default: { return VBS_COMP_RIGHT; }
+    }
+}
+
+void vec_read_file_test(Vector *vec, char file_name[], bool add_vec_info) {
+    FILE *file;
+    int err = 0;
+    void *data;
+
+    err = fopen_s(&file, file_name, "r");
+    if (err != 0) { printf("ERROR: %d\n", err); }
+    printf("File opened!\n");
+
+    while (true) {
+        printf("Line: ");
+        Vector line;
+        vec_init(&line, sizeof(char), NULL, 4);
+
+        // Allocate double the amount +2 (to get rid of `\n` and `\0`)
+        // If the vector is full and the last character is not a `\n` or '\0', repeat
+        // Do the first read without +2 in hope that it fits the first time
+        while (true) {
+            char* fgets_ret;
+
+            // Minimal `cap` required is 3 (to fit `\n` and '\0', and so it's )
+            _vec_alloc(vec, ((vec->cap - 2) * 2) + 2);
+            fgets_ret = fgets(vec->data + (vec->cap/2) * vec->size, vec->cap/2, file);
+
+            // Read failed
+            if (fgets_ret == NULL) {
+                // Check for errors
+                err = ferror(file);
+                if (err != 0) { printf("ERROR: %d", err); }
+            }
+
+            size_t index = 0;
+            switch (vec_binary_search(vec, &vec_rf_comp, vec->cap/2, vec->cap, &index)) {
+                case VBS_OK: { _vec_alloc(&line, line.cap - 2); goto line_read; }
+                case VBS_NOT_FOUND: { break; }
+                default: { printf("ERROR: In binary search"); }
+            }
+        }
+
+    line_read:
+        vec_push(vec, &line);
+    }
+
+    fclose(file);
+
+    for (int y = 0; y <)
 }
 
 int main() {
     Vector vec;
 
     //vec_init_test(&vec, true);
-    vec_read_file_test(&vec, "vec_test.txt", true);
+    //vec_read_file_test(&vec, "vec_test.txt", true);
+    //vec_binary_search_test();
+    fgets_test();
 
     return 0;
 }
