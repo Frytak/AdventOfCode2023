@@ -27,6 +27,7 @@ int get_number(Vector *vec, size_t beg, size_t *end) {
 
 bool is_colon(void *vec_item) { return *(char*)vec_item == ':'; }
 bool until_digit(void *vec_item) { return isdigit(*(char*)vec_item); }
+bool contains_num(void *vec_item, void* provided_item) { return *(int*)vec_item == *(int*)provided_item; }
 
 const size_t ID_BEGIN_INDEX = 5;
 
@@ -58,38 +59,81 @@ int main() {
 
         printf("Index: %d\n", card_id);
 
-        // Get numbers you have
-        Vector winning_numbers;
-        vec_init(&winning_numbers, sizeof(int), NULL, 0);
-
-        for (size_t x = semicolon_index + 2;;) {
-            char *c = vec_get_unchecked(row, x);
-            if (*c == '|') { break; } 
-
-            size_t end = 0;
-            int winning_number = get_number(row, x, &end);
-            vec_push(&winning_numbers, &winning_number);
-            x = end + 2;
-        }
-
         // Get winning numbers
+        size_t pipe_index = 0;
         Vector winning_numbers;
         vec_init(&winning_numbers, sizeof(int), NULL, 0);
 
-        for (size_t x = semicolon_index + 2;;) {
+        for (size_t x = semicolon_index + 2; x < row->len;) {
             char *c = vec_get_unchecked(row, x);
-            if (*c == '|') { break; } 
+            if (*c == '|') { pipe_index = x; break; } 
+
+            size_t num_begin_index = 0;
+            vec_find_first(row, &until_digit, x, row->len-1, &num_begin_index);
 
             size_t end = 0;
-            int winning_number = get_number(row, x, &end);
+            int winning_number = get_number(row, num_begin_index, &end);
             vec_push(&winning_numbers, &winning_number);
             x = end + 2;
         }
 
-        for (size_t x = 0; x < winning_numbers.len; x++) {
-            printf("%d ", *(char*)vec_get_unchecked(&winning_numbers, x));
+        // Get numbers you have
+        Vector numbers_you_have;
+        vec_init(&numbers_you_have, sizeof(int), NULL, 0);
+
+        for (size_t x = pipe_index + 2; x < row->len;) {
+            char *c = vec_get_unchecked(row, x);
+
+            size_t num_begin_index = 0;
+            vec_find_first(row, &until_digit, x, row->len-1, &num_begin_index);
+
+            size_t end = 0;
+            int number_you_have = get_number(row, num_begin_index, &end);
+            vec_push(&numbers_you_have, &number_you_have);
+            x = end + 2;
+        }
+
+        // Push the card to vector of cards
+        Card card = { card_id, winning_numbers, numbers_you_have };
+        vec_push(&cards, &card);
+    }
+
+    for (int c = 0; c < cards.len; c++) {
+        Card *card = vec_get_unchecked(&cards, c);
+
+        printf("Card index: %d\n", card->id);
+        printf("Winning numbers: ");
+        for (int win = 0; win < card->winning_numbers.len; win++) {
+            printf("%d ", *(int*)vec_get_unchecked(&card->winning_numbers, win));
+        }
+        printf("\n");
+
+        printf("Numbers you have: ");
+        for (int have = 0; have < card->numbers_you_have.len; have++) {
+            printf("%d ", *(int*)vec_get_unchecked(&card->numbers_you_have, have));
+        }
+        printf("\n\n");
+    }
+
+    // Sum up card worth
+    int card_worth_sum = 0;
+    for (int i = 0; i < cards.len; i++) {
+        Card *card = vec_get_unchecked(&cards, i);
+
+        // Calculate worth of a card
+        int card_worth = 0;
+        for (int j = 0; card->numbers_you_have.len; j++) {
+            int *num = vec_get_unchecked(&card->numbers_you_have, j);
+
+            switch (vec_contains(&card->winning_numbers, &contains_num, num, 0, card->winning_numbers.len-1, NULL)) {
+                case CF_OK: { (card_worth == 0) ? (card_worth += 1) : (card_worth *= 2); break; }
+                case CF_NOT_FOUND: { break; }
+                default: { return 1; }
+            }
         }
     }
+
+    printf("Cards worth sums up to: %d", card_worth_sum);
 
     return 0;
 }
