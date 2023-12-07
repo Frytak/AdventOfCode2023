@@ -29,6 +29,23 @@ typedef enum {
     VBS_COMP_INVALID_OUTPUT,
 } VBS_RET;
 
+typedef enum {
+    // No errors, value was found
+    CF_OK,
+
+    // The value doesn't exist in the specified boundries
+    CF_NOT_FOUND,
+
+    // `beg` or `end` are larger than the vector length
+    CF_OUT_OF_BOUNDS,
+
+    // `beg` is bigger than `end`
+    CF_INVALID_INPUT,
+
+    // the `comp` function returns a value that is boolean (true, false) (1, 0)
+    CF_COMP_INVALID_OUTPUT,
+} COMP_FUNC_RET;
+
 typedef struct Vector {
     size_t len;
     size_t cap;
@@ -48,7 +65,9 @@ void *vec_get_unchecked(Vector *vec, size_t index);
 
 void *vec_get(Vector *vec, size_t index);
 
-void vec_find_first(Vector *vec, bool (*comp)(void *vec_item), size_t beg, size_t end, size_t *index);
+COMP_FUNC_RET vec_find_first(Vector *vec, bool (*comp)(void *vec_item), size_t beg, size_t end, size_t *index);
+
+COMP_FUNC_RET vec_contains(Vector *vec, bool (*comp)(void *vec_item, void *provided_item), void *item, size_t beg, size_t end, size_t *index);
 
 int vec_init(Vector *vec, size_t size, void *data, size_t amount);
 

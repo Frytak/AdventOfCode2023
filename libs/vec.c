@@ -115,17 +115,32 @@ VBS_COMP vec_rf_comp(void *character) {
     }
 }
 
-// TODO: Implement errors
-void vec_find_first(Vector *vec, bool (*comp)(void *vec_item), size_t beg, size_t end, size_t *index) {
-    if (beg > end) { return; }
-    if (end > vec->len-1) { return; }
+COMP_FUNC_RET vec_find_first(Vector *vec, bool (*comp)(void *vec_item), size_t beg, size_t end, size_t *index) {
+    if (beg > end) { return CF_INVALID_INPUT; }
+    if (end > vec->len-1) { return CF_OUT_OF_BOUNDS; }
 
-    for (size_t x = beg; x < end; x++) {
+    for (size_t x = beg; x <= end; x++) {
         if (comp(vec_get_unchecked(vec, x))) {
             *index = x;
-            return;
+            return CF_OK;
         }
     }
+
+    return CF_NOT_FOUND;
+}
+
+COMP_FUNC_RET vec_contains(Vector *vec, bool (*comp)(void *vec_item, void *provided_item), void *item, size_t beg, size_t end, size_t *index) {
+    if (beg > end) { return CF_INVALID_INPUT; }
+    if (end > vec->len-1) { return CF_OUT_OF_BOUNDS; }
+
+    for (size_t x = beg; x <= end; x++) {
+        if (comp(vec_get_unchecked(vec, x), item)) {
+            *index = x;
+            return CF_OK;
+        }
+    }
+
+    return CF_NOT_FOUND;
 }
 
 int vec_read_file(Vector *vec, char file_name[], size_t *bytes_written, bool minimize) {
