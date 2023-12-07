@@ -1,4 +1,5 @@
 #include <corecrt.h>
+#include <stdbool.h>
 
 typedef enum {
     // The searched value is to the left
@@ -46,6 +47,8 @@ int vec_push(Vector *vec, void *data);
 void *vec_get_unchecked(Vector *vec, size_t index);
 
 void *vec_get(Vector *vec, size_t index);
+
+void vec_find_first(Vector *vec, bool (*comp)(void *vec_item), size_t beg, size_t end, size_t *index);
 
 int vec_init(Vector *vec, size_t size, void *data, size_t amount);
 

@@ -47,8 +47,12 @@ int vec_push(Vector *vec, void *data) {
 
     // Double the capacity if there is not enough space
     if (vec->len > vec->cap) {
-        int result = _vec_double(vec);
-        if (result != 0) { return result; }
+        if (vec->cap == 0) {
+            _vec_alloc(vec, 2);
+        } else {
+            int result = _vec_double(vec);
+            if (result != 0) { return result; }
+        }
     }
 
     // Copy the data
@@ -86,10 +90,7 @@ int vec_init(Vector *vec, size_t size, void *data, size_t amount) {
     vec->len = 0;
     vec->cap = 0;
 
-    // Get a power of two that is closest to the required amount
-    if (amount != 0) {
-        vec->cap = amount;
-    }
+    if (amount != 0) { vec->cap = amount; }
 
     // Allocate the memory
     vec->data = malloc(vec->cap * vec->size);
@@ -114,89 +115,74 @@ VBS_COMP vec_rf_comp(void *character) {
     }
 }
 
+// TODO: Implement errors
+void vec_find_first(Vector *vec, bool (*comp)(void *vec_item), size_t beg, size_t end, size_t *index) {
+    if (beg > end) { return; }
+    if (end > vec->len-1) { return; }
+
+    for (size_t x = beg; x < end; x++) {
+        if (comp(vec_get_unchecked(vec, x))) {
+            *index = x;
+            return;
+        }
+    }
+}
+
 int vec_read_file(Vector *vec, char file_name[], size_t *bytes_written, bool minimize) {
     FILE *file;
     int err = 0;
     void *data;
 
     err = fopen_s(&file, file_name, "r");
-    if (err != 0) { return err; }
-    printf("File opened!\n");
+    if (err != 0) { printf("ERROR: %d\n", err); }
 
-    if (vec->cap == 0) {
-        _vec_alloc(vec, 4);
-    }
-
-    if (vec->cap > vec->len) {
-        char* fgets_ret;
-        fgets_ret = fgets(vec->data + (vec->len * vec->size), (vec->cap - vec->len) * vec->size, file);
-        printf("File hopefully read correctly...\n");
-
-        if (fgets_ret == NULL) {
-            // Check for errors
-            err = ferror(file);
-            if (err != 0) { return err; }
-            printf("No errors!\n");
-
-            // Check for EOF
-            int feof_ret = 0;
-            feof_ret = feof(file);
-            if (feof_ret == 0) {
-                printf("It's EOF! %d\n", feof_ret);
-                goto finalize;
-            }
-        }
-
-        printf("First char: '%c'\n", *fgets_ret);
-        vec->len = vec->cap;
-        printf("No issues while reading the file!\n");
-    }
-
-    // Read each line as a seperate `Vector`
+    vec_init(vec, sizeof(Vector), NULL, 0);
     while (true) {
         Vector line;
+        size_t index = 0;
         vec_init(&line, sizeof(char), NULL, 4);
 
-        // Allocate double the amount +2 (to get rid of `\n` and `\0`)
-        // If the vector is full and the last character is not a `\n` or '\0', repeat
-        // Do the first read without +2 in hope that it fits the first time
-        while (true) {
+        for (int i = 0;; i++) {
             char* fgets_ret;
 
-            // Minimal `cap` required is 3 (to fit `\n` and '\0', and so it's )
-            _vec_alloc(vec, ((vec->cap - 2) * 2) + 2);
-            fgets_ret = fgets(vec->data + (vec->cap/2) * vec->size, vec->cap/2, file);
+            size_t shift = line.cap - 1;
+            _vec_alloc(&line, ((line.cap - 2) * 2) + 2);
+            size_t cap = shift;
+            if (i == 0) { shift = 0; cap = line.cap; }
+            fgets_ret = fgets(line.data + shift * line.size, cap, file);
 
             // Read failed
             if (fgets_ret == NULL) {
                 // Check for errors
                 err = ferror(file);
-                if (err != 0) { return err; }
+                if (err != 0) { printf("ERROR: %d", err); }
+
+                // Check for EOF 
+                if (feof(file) != 0) {
+                    goto file_read;
+                }
             }
 
-            size_t index = 0;
-            switch (vec_binary_search(vec, &vec_rf_comp, vec->cap/2, vec->cap, &index)) {
+            // Set the lenght
+            line.len = line.cap;
+
+            switch (vec_binary_search(&line, &vec_rf_comp, line.cap/2, line.cap, &index)) {
                 case VBS_OK: { _vec_alloc(&line, line.cap - 2); goto line_read; }
                 case VBS_NOT_FOUND: { break; }
-                default: { return -1; }
+                case VBS_INVALID_INPUT: { printf("ERROR: Invalid input."); break; }
+                case VBS_OUT_OF_BOUNDS: { printf("ERROR: Out of bounds."); break; }
+                case VBS_COMP_INVALID_OUTPUT: { printf("ERROR: Comp invalid output."); break; }
+                default: { printf("ERROR: In binary search"); break; }
             }
         }
 
     line_read:
+        line.len = index;
         vec_push(vec, &line);
     }
 
-finalize:
-    printf("\n\n\nFINALIZING...\n\n\n");
-
-    if (minimize && vec->len != vec->cap) {
-        printf("Minimizing the capacity to match the length. Cap: %d, Len: %d", (int)vec->cap, (int)vec->len);
-        vec->data = realloc(vec->data, vec->cap * vec->size);
-    }
-
+file_read:
     fclose(file);
-    printf("Done!\n");
-
     return err;
 }
 
