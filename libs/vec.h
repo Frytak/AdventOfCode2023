@@ -69,6 +69,8 @@ COMP_FUNC_RET vec_find_first(Vector *vec, bool (*comp)(void *vec_item), size_t b
 
 COMP_FUNC_RET vec_contains(Vector *vec, bool (*comp)(void *vec_item, void *provided_item), void *item, size_t beg, size_t end, size_t *index);
 
+Vector vec_copy(Vector *vec);
+
 int vec_init(Vector *vec, size_t size, void *data, size_t amount);
 
 errno_t vec_read_file(Vector *vec, char file_name[], size_t *bytes_written, bool minimize);

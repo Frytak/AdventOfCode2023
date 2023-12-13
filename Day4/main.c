@@ -27,7 +27,7 @@ int get_number(Vector *vec, size_t beg, size_t *end) {
 
 bool is_colon(void *vec_item) { return *(char*)vec_item == ':'; }
 bool until_digit(void *vec_item) { return isdigit(*(char*)vec_item); }
-bool contains_num(void *vec_item, void* provided_item) { return *(int*)vec_item == *(int*)provided_item; }
+bool contains_num(void *vec_item, void* provided_item) { printf("\tNum compare: %d == %d\n", *(int*)provided_item, *(int*)vec_item); return *(int*)vec_item == *(int*)provided_item; }
 
 const size_t ID_BEGIN_INDEX = 5;
 
@@ -98,6 +98,8 @@ int main() {
         vec_push(&cards, &card);
     }
 
+    p_vec_info(&cards);
+
     for (int c = 0; c < cards.len; c++) {
         Card *card = vec_get_unchecked(&cards, c);
 
@@ -119,16 +121,17 @@ int main() {
     int card_worth_sum = 0;
     for (int i = 0; i < cards.len; i++) {
         Card *card = vec_get_unchecked(&cards, i);
+        printf("Card ID: %d\n", card->id);
 
         // Calculate worth of a card
         int card_worth = 0;
-        for (int j = 0; card->numbers_you_have.len; j++) {
+        for (int j = 0; j < card->numbers_you_have.len; j++) {
             int *num = vec_get_unchecked(&card->numbers_you_have, j);
 
             switch (vec_contains(&card->winning_numbers, &contains_num, num, 0, card->winning_numbers.len-1, NULL)) {
-                case CF_OK: { (card_worth == 0) ? (card_worth += 1) : (card_worth *= 2); break; }
+                case CF_OK: { printf("Found"); (card_worth == 0) ? (card_worth += 1) : (card_worth *= 2); break; }
                 case CF_NOT_FOUND: { break; }
-                default: { return 1; }
+                default: { printf("ERROR!"); }
             }
         }
     }

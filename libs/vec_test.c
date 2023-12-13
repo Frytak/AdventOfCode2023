@@ -43,6 +43,46 @@ void vec_binary_search_test() {
     }
 }
 
+typedef struct {
+    int id;
+    Vector winning_numbers;
+} Card;
+const int TEST_WINNING_NUMS[3][4] = {
+    {1, 2, 3, 4},
+    {5, 9, 1, 4},
+    {8, 8, 8, 7}
+};
+
+void vec_with_structs_with_vecs() {
+    Vector cards;
+    vec_init(&cards, sizeof(Card), NULL, 3);
+
+    // Create cards
+    for (int i = 0; i < 3; i++) {
+        Card card;
+        Vector winning_numbers;
+        vec_init(&winning_numbers, sizeof(int), &(TEST_WINNING_NUMS[i]), 4);
+        card.id = i;
+        card.winning_numbers = winning_numbers;
+        vec_push(&cards, &card);
+    }
+
+    p_vec_info(&cards);
+
+    for (int i = 0; i < cards.len; i++) {
+        Card *card = vec_get_unchecked(&cards, i);
+
+        printf("Card %d:\n", i);
+        printf("\tID: %d\n", card->id);
+        printf("\tWinning numbers: ");
+
+        for (int j = 0; j < card->winning_numbers.len; j++) {
+            printf("%d ", *(int*)vec_get_unchecked(&card->winning_numbers, j));
+        }
+        printf("\n");
+    }
+}
+
 void fgets_test() {
     FILE *file;
     Vector vec;
@@ -146,9 +186,10 @@ int main() {
     Vector vec;
 
     //vec_init_test(&vec, true);
-    vec_read_file_test(&vec, "vec_test.txt", true);
+    //vec_read_file_test(&vec, "vec_test.txt", true);
     //vec_binary_search_test();
     //fgets_test();
+    vec_with_structs_with_vecs();
 
     return 0;
 }

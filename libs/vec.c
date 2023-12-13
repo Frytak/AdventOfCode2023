@@ -135,12 +135,19 @@ COMP_FUNC_RET vec_contains(Vector *vec, bool (*comp)(void *vec_item, void *provi
 
     for (size_t x = beg; x <= end; x++) {
         if (comp(vec_get_unchecked(vec, x), item)) {
-            *index = x;
+            //*index = x;
             return CF_OK;
         }
     }
 
     return CF_NOT_FOUND;
+}
+
+Vector vec_copy(Vector *vec) {
+    Vector copy;
+    vec_init(&copy, vec->size, vec->data, vec->len);
+    _vec_alloc(&copy, vec->cap);
+    return copy;
 }
 
 int vec_read_file(Vector *vec, char file_name[], size_t *bytes_written, bool minimize) {
